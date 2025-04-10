@@ -1,0 +1,154 @@
+Run the docker demon program (i.e., the Docker Desktop application must be up)
+
+base directory 
+    /Users/vatsalsharma/Documents/Data Prep/DE_ZoomCamp/data-engineering-zoomcamp/01-docker-terraform/my_docker_work
+
+
+BUILD the image based on Dockerfile contents
+    docker build -t test:pandas .
+
+# Here -t is for 'tag'
+# 'pandas' is the 'tag name/details'
+# '.' dot at the end mentioned create the image in the same directory
+
+Once image is created, we execute it 
+docker run -it test:pandas
+
+
+For ENTRYPOINT [ "bash" ] => to end the session 'exit' is the command
+
+Output when change, ENTRYPOINT [ "python", "pipeline.py" ]
+>> docker run -it test:pandas 2025-04-04
+['pipeline.py', '2025-04-04']
+sample file to invoke from docker on 2025-04-04
+
+
+# Docker for Postgres (SQL)
+docker run -it \
+  -e POSTGRES_USER="root" \
+  -e POSTGRES_PASSWORD="root" \
+  -e POSTGRES_DB="ny_taxi" \
+  -v "$(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data" \
+  -p 5432:5432 \
+  postgres:13
+
+>> Output
+2025-04-07 22:56:45.008 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2025-04-07 22:56:45.008 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2025-04-07 22:56:45.009 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2025-04-07 22:56:45.013 UTC [64] LOG:  database system was shut down at 2025-04-07 22:56:44 UTC
+2025-04-07 22:56:45.017 UTC [1] LOG:  database system is ready to accept connections
+
+pip install pgcli
+
+pgcli -h localhost -p 5432 -u root -d ny_taxi
+connection failed: role "root" does not exist
+
+
+-- Running in 'Detached Mode'
+docker run -d \
+  --name pg_ny_taxi \
+  -e POSTGRES_USER="root" \
+  -e POSTGRES_PASSWORD="root" \
+  -e POSTGRES_DB="ny_taxi" \
+  -v "$(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data" \
+  -p 5432:5432 \
+  postgres:13
+
+docker logs pg_ny_taxi
+
+docker exec -it pg_ny_taxi bash
+psql -U root -d ny_taxi
+
+ny_taxi=# \du
+                                   List of roles
+ Role name |                         Attributes                         | Member of 
+-----------+------------------------------------------------------------+-----------
+ root      | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
+
+ny_taxi=# 
+
+
+
+CREATE ROLE root_taxi WITH LOGIN PASSWORD 'root_taxi';
+GRANT ALL PRIVILEGES ON DATABASE ny_taxi TO root_taxi;
+
+pgcli -h localhost -p 5432 -u root_taxi -d ny_taxi
+psql -U root_taxi -d ny_taxi
+
+Issue was my machine was running postgres along with contrainer, causing the conflict.
+lsof -i :5432
+    This listed what is running on the port 5432
+
+brew services stop postgresql
+
+
+-->> Finally worked
+pgcli -h localhost -p 5432 -u root -d ny_taxi
+
+\dt  -- List Database Tables 
+\du  -- List Database Users
+
+
+
+
+-- For pgAdmin 
+
+docker run -d \
+  --name pgadmin \
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -p 8080:80 \
+  dpage/pgadmin4
+
+Then open browser
+    http://localhost:8080
+
+
+Note: we have 2 containers now. (1) Running Postgresql  (2) pdAdmin 
+    We need to put these together in 'network' so that they can see each other and communicate. 
+    This is donw via 'docker network' 
+
+
+docker network create pg-network 
+
+docker run -d \
+  --name pg_database \
+  -e POSTGRES_USER="root" \
+  -e POSTGRES_PASSWORD="root" \
+  -e POSTGRES_DB="ny_taxi" \
+  -v "$(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data" \
+  -p 5432:5432 \
+  --network=pg-network \
+  postgres:13
+
+docker run -d \
+  --name pgadmin_1 \
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -p 8080:80 \
+  --network=pg-network \
+  dpage/pgadmin4
+
+
+-- To convert Jupyter Notebook into Script 
+jupyter nbconvert --to=script Upload_Data.ipynb 
+
+
+
+
+
+https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet
+wget https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz 
+
+
+
+File Operations
+
+head <file_name>
+
+head -n 100 <file_name> 
+    First 100 lines from the file
+
+head -n 20 <file_name> > <new_file_name>
+    Eg head -n 20 yellow_tripdata_2021-01.csv > yellow_head20.csv
