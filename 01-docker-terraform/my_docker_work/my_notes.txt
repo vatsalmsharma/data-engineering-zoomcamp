@@ -141,7 +141,7 @@ jupyter nbconvert --to=script Upload_Data.ipynb
 https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet
 wget https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz 
 
-
+https://drive.google.com/file/d/1iQKzIZu4ZKXgfrvvu3XcLEB3Oun3vTLb/view?usp=sharing
 
 File Operations
 
@@ -152,3 +152,72 @@ head -n 100 <file_name>
 
 head -n 20 <file_name> > <new_file_name>
     Eg head -n 20 yellow_tripdata_2021-01.csv > yellow_head20.csv
+
+
+CSV_URL = "https://drive.google.com/file/d/1iQKzIZu4ZKXgfrvvu3XcLEB3Oun3vTLb/view?usp=sharing"
+PARQUET_URL = "https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet"
+
+python ingest_data.py \
+  --user=root \
+  --password=root \
+  --host=localhost \
+  --port=5432 \
+  --database_name=ny_taxi \
+  --table_name=yellow_taxi_data \
+  --url_csv=${CSV_URL} \
+  --url_parquet=${PARQUET_URL} \
+  --table_name_par=ny_taxi_data 
+
+
+# For Parquet File
+python ingest_data.py \
+  --user=root \
+  --password=root \
+  --host=localhost \
+  --port=5432 \
+  --database_name=ny_taxi \
+  --table_name=yellow_taxi_data \
+  --url_csv='https://drive.google.com/file/d/1iQKzIZu4ZKXgfrvvu3XcLEB3Oun3vTLb/view?usp=sharing' \
+  --url_parquet='https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet' \
+  --table_name_par=ny_taxi_data \
+  --file_type=p
+
+# For CSV File
+python ingest_data.py \
+  --user=root \
+  --password=root \
+  --host=localhost \
+  --port=5432 \
+  --database_name=ny_taxi \
+  --table_name=yellow_taxi_data \
+  --url_csv='https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2020-08.csv.gz' \
+  --url_parquet='https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet' \
+  --table_name_par=ny_taxi_data \
+  --file_type=c
+
+
+docker build -t taxi_data_ingest:v001 . 
+
+# Note : --network and --host values
+
+docker run -it \
+  --network=pg-network \
+  taxi_data_ingest:v001 \
+    --user=root \
+    --password=root \
+    --host=pg_database \
+    --port=5432 \
+    --database_name=ny_taxi \
+    --table_name=yellow_taxi_data \
+    --url_csv='https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2020-08.csv.gz' \
+    --url_parquet='https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet' \
+    --table_name_par=ny_taxi_data \
+    --file_type=c
+
+
+Python HTTP server
+    python -m http.server
+
+IP address of my localhost 
+    ipconfig getifaddr en0
+    192.168.0.92
